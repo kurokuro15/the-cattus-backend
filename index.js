@@ -74,16 +74,15 @@ const saveData = async data => {
 
   // enviamos el correo con la data :D
   try {
-    const msgRes = transporter.sendMail(mailData(data), (err, info) => {
-      if (err) return err
-      else return info
+    transporter.sendMail(mailData(data), (err, info) => {
+      if (err) console.error(err)
+      else console.log(info)
     })
 
     const dbRes = await supabase
       .from('contact')
       .insert({ email, message, name, subject }, 'minimal')
 
-    console.log(msgRes)
     console.log(dbRes)
     return dbRes
   } catch (error) {
