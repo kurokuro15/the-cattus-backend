@@ -1,5 +1,16 @@
 require('dotenv').config()
-const { SUPABASE_URL, SUPABASE_TOKEN, HCAPTCHA_SECRET, PORT } = process.env
+const {
+  HCAPTCHA_SECRET,
+  MAIL_PORT,
+  MAIL_RECEIVER,
+  MAIL_SECURE,
+  MAIL_SENDER_HOST,
+  MAIL_SENDER_PASS,
+  MAIL_SENDER_USER,
+  PORT,
+  SUPABASE_TOKEN,
+  SUPABASE_URL
+} = process.env
 const H_CAPTCHA_URL = 'https://hcaptcha.com/siteverify'
 const port = PORT || 3001
 // Crear servidor
@@ -20,13 +31,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_TOKEN)
 
 const nodemailer = require('nodemailer')
 const transporter = nodemailer.createTransport({
-  port: 465, // smtp port
-  host: 'smtp.gmail.com', // smtp server
+  port: MAIL_PORT, // smtp port
+  host: MAIL_SENDER_HOST, // smtp server
   auth: {
-    user: 'sender@example.com',
-    pass: 'password'
+    user: MAIL_SENDER_USER,
+    pass: MAIL_SENDER_PASS
   },
-  secure: true // true for 465, false for other ports
+  secure: MAIL_SECURE // true for 465, false for other ports
 })
 
 app.use(cors())
@@ -52,7 +63,7 @@ const validateCaptcha = async req => {
 const mailData = ({ email, message, name, subject }) => {
   return {
     from: email, // sender address
-    to: 'receiver@mail.com', // list of receivers
+    to: MAIL_RECEIVER, // list of receivers
     subject: subject,
     text: `By ${name}: \n\n ${message} \n ${email}`
   }
@@ -62,14 +73,22 @@ const saveData = async data => {
   const { email, message, name, subject } = data
 
   // enviamos el correo con la data :D
-  transporter.sendMail(mailData(data), (err, info) => {
-    if (err) console.log(err)
-    else console.log(info)
-  })
+  try {
+    const msgRes = transporter.sendMail(mailData(data), (err, info) => {
+      if (err) return err
+      else return info
+    })
 
-  return await supabase
-    .from('contact')
-    .insert({ email, message, name, subject }, 'minimal')
+    const dbRes = await supabase
+      .from('contact')
+      .insert({ email, message, name, subject }, 'minimal')
+
+    console.log(msgRes)
+    console.log(dbRes)
+    return dbRes
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 /*#######################################################################*/
