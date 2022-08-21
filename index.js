@@ -18,6 +18,17 @@ const { default: axios } = require('axios')
 const { createClient } = require('@supabase/supabase-js')
 const supabase = createClient(SUPABASE_URL, SUPABASE_TOKEN)
 
+const nodemailer = require('nodemailer')
+const transporter = nodemailer.createTransport({
+  port: 465, // smtp port
+  host: 'smtp.gmail.com', // smtp server
+  auth: {
+    user: 'sender@example.com',
+    pass: 'password'
+  },
+  secure: true // true for 465, false for other ports
+})
+
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -38,8 +49,23 @@ const validateCaptcha = async req => {
   return await axios.post(H_CAPTCHA_URL, body, options)
 }
 
+const mailData = ({ email, message, name, subject }) => {
+  return {
+    from: email, // sender address
+    to: 'receiver@mail.com', // list of receivers
+    subject: subject,
+    text: `By ${name}: \n\n ${message} \n ${email}`
+  }
+}
+
 const saveData = async data => {
   const { email, message, name, subject } = data
+
+  // enviamos el correo con la data :D
+  transporter.sendMail(mailData(data), (err, info) => {
+    if (err) console.log(err)
+    else console.log(info)
+  })
 
   return await supabase
     .from('contact')
